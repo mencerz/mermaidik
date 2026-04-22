@@ -1,0 +1,42 @@
+{
+  "Flowchart": {
+    "keywords": ["graph", "flowchart"],
+    "syntax": "Direction: TD (top-down), LR (left-right), BT, RL.\nNodes: A[rectangle] A(rounded) A{diamond} A([stadium]) A[[subroutine]] A[(cylinder)] A((circle)) A>asymmetric] A{{hexagon}}\nLinks: --> (arrow) --- (line) -.-> (dotted arrow) ==> (thick arrow)\nLabels on links: A -->|text| B or A -- text --> B\nSubgraphs: subgraph title ... end\nIMPORTANT: If node text contains special chars like () {} |, wrap in quotes: A[\"Text (with parens)\"]"
+  },
+  "Sequence": {
+    "keywords": ["sequenceDiagram"],
+    "syntax": "Start with: sequenceDiagram\nParticipants: participant Alice or actor Bob\nMessages: A->>B: text (solid arrow) A-->>B: text (dotted) A-)B: text (async) A-xB: text (cross)\nActivation: activate A / deactivate A or A->>+B: / A-->>-B:\nNotes: Note right of A: text / Note over A,B: text\nLoops: loop text ... end\nAlternatives: alt text ... else text ... end\nOptional: opt text ... end\nParallel: par text ... and text ... end\nCritical: critical text ... option text ... end\nBreak: break text ... end\nRect highlight: rect rgba(r,g,b,a) ... end"
+  },
+  "Class": {
+    "keywords": ["classDiagram"],
+    "syntax": "Start with: classDiagram\nClass definition: class ClassName { +String attr\\n +method() }\nVisibility: + public, - private, # protected, ~ package\nRelationships: A <|-- B (inheritance) A *-- B (composition) A o-- B (aggregation) A --> B (association) A -- B (link) A ..> B (dependency) A ..|> B (realization)\nCardinality: A \"1\" --> \"*\" B\nAnnotation: <<interface>> <<abstract>> <<service>> <<enumeration>>\nGeneric: class List~T~\nDirection: direction RL"
+  },
+  "State": {
+    "keywords": ["stateDiagram", "stateDiagram-v2"],
+    "syntax": "Start with: stateDiagram-v2\nStates: s1 (simple) state \"Description\" as s1\nTransitions: s1 --> s2 or s1 --> s2 : label\nStart/End: [*] --> s1 or s1 --> [*]\nComposite: state StateName { s1 --> s2 }\nFork/Join: state fork_state <<fork>> / <<join>>\nChoice: state choice_state <<choice>>\nNotes: note right of s1 : text ... end note\nConcurrency: state name { s1 --> s2 -- s3 --> s4 }\nDirection: direction LR"
+  },
+  "ER Diagram": {
+    "keywords": ["erDiagram"],
+    "syntax": "Start with: erDiagram\nEntities: ENTITY_NAME { type name PK\\n type name FK }\nRelationships: A ||--o{ B : label\nCardinality markers: || (exactly one) o| (zero or one) }| (one or more) }o (zero or more)\nTypes: string, int, float, date, boolean, enum\nKeys: PK (primary) FK (foreign) UK (unique)\nIMPORTANT: Entity names must be single words (no spaces). Relationship labels are required."
+  },
+  "Gantt": {
+    "keywords": ["gantt"],
+    "syntax": "Start with: gantt\ntitle: title My Title\ndateFormat: dateFormat YYYY-MM-DD\naxisFormat: axisFormat %m/%d\nSections: section Name\nTasks: TaskName :id, start, duration or TaskName :id, after otherId, duration\nDuration: 1d 2w 3h\nStatus: done, active, crit (critical)\nMilestone: TaskName :milestone, id, after otherId, 0d\nExcludes: excludes weekends / excludes 2024-01-01"
+  },
+  "Pie Chart": {
+    "keywords": ["pie"],
+    "syntax": "Start with: pie\nOptional title: pie title My Title\nOptional showData to display values\nData entries: \"Label\" : value\nValues are numbers (int or float)\nExample:\npie title Pets\n    \"Dogs\" : 386\n    \"Cats\" : 85\n    \"Rats\" : 15"
+  },
+  "Mindmap": {
+    "keywords": ["mindmap"],
+    "syntax": "Start with: mindmap\nRoot: root((text)) for circle, root(text) for rounded, root[text] for square, root)text( for bang, root{{text}} for hexagon\nChildren defined by INDENTATION (2 spaces per level)\nNode shapes: id((circle)) id(rounded) id[square] id)bang( id{{hexagon}} id)cloud(\nIcons: ::icon(fa fa-icon)\nClasses: :::className\nIMPORTANT: Indentation defines hierarchy. No arrows or links — only nesting."
+  },
+  "Timeline": {
+    "keywords": ["timeline"],
+    "syntax": "Start with: timeline\nOptional: title My Title\nTime periods: 2024-Q1 : Event 1 : Event 2\nEvents on new lines with same indentation share the time period\nSections: section Name\nExample:\ntimeline\n    title History\n    2020 : Event A\n         : Event B\n    2021 : Event C"
+  },
+  "Git Graph": {
+    "keywords": ["gitGraph"],
+    "syntax": "Start with: gitGraph\nCommit: commit (on current branch)\nCommit with id: commit id: \"abc\"\nCommit with tag: commit tag: \"v1.0\"\nCommit type: commit type: HIGHLIGHT / REVERSE / NORMAL\nBranch: branch name\nCheckout: checkout name\nMerge: merge name\nCherry-pick: cherry-pick id: \"abc\"\nOrder: order: 0 (branch display order)\nOrientation: TB or LR (via options)"
+  }
+}

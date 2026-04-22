@@ -1,0 +1,9 @@
+node_modules/
+.env
+diagrams.db
+diagrams.db-shm
+diagrams.db-wal
+analysis/
+.claude/
+.idea/
+.DS_Store
