@@ -220,6 +220,32 @@ body {
   position: relative;
 }
 
+.diagram-list li.diagram-group-header {
+  display: block;
+  padding: 14px 4px 4px;
+  margin-bottom: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  cursor: default;
+  background: transparent;
+  border-radius: 0;
+}
+
+.diagram-list li.diagram-group-header:hover {
+  background: transparent;
+}
+
+.diagram-list li.diagram-group-header:first-child {
+  padding-top: 4px;
+}
+
+.sidebar.collapsed .diagram-list li.diagram-group-header {
+  display: none;
+}
+
 .diagram-info {
   flex: 1;
   min-width: 0;

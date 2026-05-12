@@ -20,6 +20,37 @@ const escapeHtml = (s) => s
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
+// Bucket diagrams by recency relative to local "now". Input is assumed sorted
+// newest-first; output preserves that order across buckets.
+const groupDiagramsByDate = (items) => {
+  const now = new Date();
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const today = startOfDay(now);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const sevenAgo = new Date(today); sevenAgo.setDate(sevenAgo.getDate() - 7);
+  const thirtyAgo = new Date(today); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
+
+  const bucketFor = (item) => {
+    const ts = new Date(item.updated_at);
+    const day = startOfDay(ts);
+    if (day.getTime() === today.getTime()) return { key: 'today', label: 'Today' };
+    if (day.getTime() === yesterday.getTime()) return { key: 'yesterday', label: 'Yesterday' };
+    if (day >= sevenAgo) return { key: 'last7', label: 'Previous 7 days' };
+    if (day >= thirtyAgo) return { key: 'last30', label: 'Previous 30 days' };
+    const label = ts.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    const key = `m-${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
+    return { key, label };
+  };
+
+  const groups = new Map();
+  for (const item of items) {
+    const b = bucketFor(item);
+    if (!groups.has(b.key)) groups.set(b.key, { key: b.key, label: b.label, items: [] });
+    groups.get(b.key).items.push(item);
+  }
+  return Array.from(groups.values());
+};
+
 // Fullscreen modal for inspecting a single embedded diagram. Renders the mermaid
 // source fresh, with viewBox-driven zoom/pan + export. Closes on Esc / backdrop click.
 function FullscreenDiagram({ src, onClose }) {
@@ -1157,6 +1188,121 @@ export default function App() {
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
+  // Build a standalone HTML document of the currently rendered markdown preview.
+  // Mermaid v11 inlines its CSS into each SVG, so the output is fully self-contained.
+  const buildMarkdownExportHtml = useCallback(() => {
+    const body = previewRef.current?.querySelector('.markdown-body');
+    if (!body) return null;
+    const clone = body.cloneNode(true);
+    // Strip per-diagram toolbars — they're interactive noise in a static export
+    clone.querySelectorAll('.md-mermaid-toolbar').forEach((el) => el.remove());
+    // Ensure each SVG has an xmlns and scales naturally
+    clone.querySelectorAll('svg').forEach((svg) => {
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svg.removeAttribute('width');
+      svg.removeAttribute('height');
+      svg.style.maxWidth = '100%';
+      svg.style.height = 'auto';
+    });
+
+    const css = `
+      *, *::before, *::after { box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; line-height: 1.6; max-width: 900px; margin: 32px auto; padding: 0 32px 64px; font-size: 15px; background: #ffffff; }
+      h1, h2, h3, h4, h5, h6 { margin: 1.5em 0 0.6em; line-height: 1.25; color: #0f172a; font-weight: 600; }
+      h1 { font-size: 28px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+      h2 { font-size: 22px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+      h3 { font-size: 18px; }
+      h4 { font-size: 16px; }
+      p { margin: 0.8em 0; }
+      a { color: #2563eb; text-decoration: none; }
+      strong { font-weight: 600; color: #0f172a; }
+      em { font-style: italic; }
+      code { font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace; font-size: 0.88em; background: #f1f5f9; color: #0f172a; padding: 1px 5px; border-radius: 3px; border: 1px solid #e2e8f0; }
+      pre { background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 6px; overflow-x: auto; margin: 0.8em 0; font-size: 13px; line-height: 1.5; }
+      pre code { background: transparent; border: 0; padding: 0; color: inherit; font-size: inherit; }
+      ul, ol { margin: 0.6em 0 0.8em; padding-left: 28px; }
+      li { margin: 0.25em 0; }
+      blockquote { margin: 1em 0; padding: 0.4em 14px; color: #475569; border-left: 4px solid #cbd5e1; background: #f1f5f9; border-radius: 0 4px 4px 0; }
+      table { border-collapse: collapse; margin: 1em 0; font-size: 14px; }
+      th, td { border: 1px solid #cbd5e1; padding: 6px 12px; text-align: left; }
+      th { background: #f1f5f9; font-weight: 600; }
+      hr { border: 0; border-top: 1px solid #e2e8f0; margin: 2em 0; }
+      img { max-width: 100%; height: auto; }
+      .md-mermaid-block { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 1.2em 0; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+      .md-mermaid-block svg { max-width: 100%; height: auto; display: inline-block; }
+      @media print {
+        body { max-width: none; margin: 0; padding: 14mm 16mm; font-size: 11pt; }
+        h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
+        .md-mermaid-block, pre, table, blockquote { break-inside: avoid; page-break-inside: avoid; }
+        a { color: inherit; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+      }
+    `;
+
+    const safeTitle = escapeHtml(title || 'Document');
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${safeTitle}</title>
+<style>${css}</style>
+</head>
+<body>
+${clone.outerHTML}
+</body>
+</html>`;
+  }, [title]);
+
+  const exportMarkdownHtml = useCallback(() => {
+    const html = buildMarkdownExportHtml();
+    if (!html) return;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || 'document'}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [buildMarkdownExportHtml, title]);
+
+  // Print via hidden iframe — more reliable than window.open() with popup blockers,
+  // and keeps the user in their current tab. They pick "Save as PDF" in the print dialog.
+  const exportMarkdownPdf = useCallback(() => {
+    const html = buildMarkdownExportHtml();
+    if (!html) return;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const iframe = document.createElement('iframe');
+    Object.assign(iframe.style, {
+      position: 'fixed', right: '0', bottom: '0',
+      width: '0', height: '0', border: '0', visibility: 'hidden',
+    });
+    iframe.src = url;
+
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      URL.revokeObjectURL(url);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    };
+
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.onafterprint = cleanup;
+        iframe.contentWindow.print();
+      } catch (e) {
+        cleanup();
+      }
+      // Safety net: some browsers don't fire afterprint reliably.
+      setTimeout(cleanup, 60_000);
+    };
+    document.body.appendChild(iframe);
+  }, [buildMarkdownExportHtml]);
+
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -1257,7 +1403,17 @@ export default function App() {
           }}
         />
         <ul className="diagram-list">
-          {diagrams.map((d) => {
+          {groupDiagramsByDate(diagrams).flatMap((group) => [
+            !sidebarCollapsed && (
+              <li
+                key={`hdr-${group.key}`}
+                className="diagram-group-header"
+                aria-hidden="true"
+              >
+                {group.label}
+              </li>
+            ),
+            ...group.items.map((d) => {
             const isActive = d.id === activeId;
             const itemDirty = isActive && isDirty;
             const initial = (d.title || '?').charAt(0).toUpperCase();
@@ -1328,7 +1484,8 @@ export default function App() {
                 )}
               </li>
             );
-          })}
+            }),
+          ])}
           {!sidebarCollapsed && diagrams.length === 0 && <li className="empty">No saved diagrams</li>}
         </ul>
       </aside>
@@ -1511,6 +1668,14 @@ export default function App() {
                   </button>
                   {showExportMenu && (
                     <div className="export-menu">
+                      {renderMode === 'markdown' ? (
+                        <>
+                          <div className="export-section">Document</div>
+                          <button onClick={() => { exportMarkdownHtml(); setShowExportMenu(false); }}>HTML (self-contained)</button>
+                          <button onClick={() => { exportMarkdownPdf(); setShowExportMenu(false); }}>PDF (via Print)</button>
+                        </>
+                      ) : (
+                        <>
                       <div className="export-section">PNG</div>
                       <button onClick={() => { exportDiagram('png', 2); setShowExportMenu(false); }}>PNG 2x</button>
                       <button onClick={() => { exportDiagram('png', 4); setShowExportMenu(false); }}>PNG 4x (recommended)</button>
@@ -1518,6 +1683,8 @@ export default function App() {
                       <div className="export-section">Other</div>
                       <button onClick={() => { exportDiagram('jpeg', 4); setShowExportMenu(false); }}>JPEG 4x</button>
                       <button onClick={() => { exportDiagram('svg'); setShowExportMenu(false); }}>SVG (vector)</button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
